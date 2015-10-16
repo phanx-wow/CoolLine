@@ -424,74 +424,53 @@ end
 CoolLine.NewCooldown, CoolLine.ClearCooldown = NewCooldown, ClearCooldown
 
 do  -- cache spells that have a cooldown
-	local GetSpellBookItemName, GetSpellBookItemInfo, GetSpellBaseCooldown, GetSpellCharges, IsTalentSpell
-	    = GetSpellBookItemName, GetSpellBookItemInfo, GetSpellBaseCooldown, GetSpellCharges, IsTalentSpell
-	local N_MIN_COOLDOWN = gsub(SPELL_RECAST_TIME_MIN, "%%%.3g", "(.+)")
-	local N_SEC_COOLDOWN = gsub(SPELL_RECAST_TIME_SEC, "%%%.3g", "(.+)")
-	local scantip = CreateFrame("GameTooltip")
-	for i = 1, 3 do
-		local R = scantip:CreateFontString(nil,nil,"GameFontNormal")
-		scantip:AddFontStrings(scantip:CreateFontString(nil,nil,"GameFontNormal"), R)
-		scantip[i] = R
-	end
-	local function ParseCooldown(text)
-		local spellcd = strmatch(text, N_SEC_COOLDOWN)
-		if spellcd then
-			return tonumber((gsub(spellcd, ",", "."))) * 1000 -- tonumber doesn't support commas as decimal separators
-		end
-		spellcd = strmatch(text, N_MIN_COOLDOWN)
-		if spellcd then
-			return tonumber((gsub(spellcd, ",", "."))) * 60000 -- tonumber doesn't support commas as decimal separators
-		end
-	end
+	local GetSpellBookItemName, GetSpellBookItemInfo, GetSpellBaseCooldown, GetSpellCharges
+	    = GetSpellBookItemName, GetSpellBookItemInfo, GetSpellBaseCooldown, GetSpellCharges
+
 	local function CacheBook(btype)
-		local lastId
+		local lastID
 		local sb = spells[btype]
 		local _, _, offset, numSpells = GetSpellTabInfo(2)
-		for i = 1, offset + numSpells, 1 do
+		for i = 1, offset + numSpells do
 			local spellName = GetSpellBookItemName(i, btype)
 			if not spellName then break end
-			local slotType, spellId = GetSpellBookItemInfo(i, btype)
-			if spellId and slotType == "FLYOUT" then
-				local _, _, numSlots, isKnown = GetFlyoutInfo(spellId)
-				for fi = 1, ((isKnown and numSlots) or 0), 1 do
-					local flySpellId, _, _, flySpellName, _ = GetFlyoutSlotInfo(spellId, fi)
-					lastId = flySpellId
-					if flySpellId then
-						local flycd = GetSpellBaseCooldown(flySpellId)
-						if flycd and flycd > 2499 then
-							sb[flySpellId] = specialspells[flySpellId] or flySpellName
+			local spellType, spellID = GetSpellBookItemInfo(i, btype)
+			if spellID and spellType == "FLYOUT" then
+				local _, _, numSlots, isKnown = GetFlyoutInfo(spellID)
+				if isKnown then
+					for j = 1, numSlots do
+						local flyID, _, _, flyName = GetFlyoutSlotInfo(spellID, j)
+						lastID = flyID
+						if flyID then
+							local flyCD = GetSpellBaseCooldown(flyID)
+							if flyCD and flyCD > 2499 then
+								sb[flyID] = specialspells[flyID] or flyName
+							end
 						end
 					end
 				end
-			elseif spellId and slotType ~= "FUTURESPELL" and spellId ~= lastId then
-				lastId = spellId
-				local _, maxCharges = GetSpellCharges(spellId)
-				if maxCharges and maxCharges > 0 then
-					--print(i, spellName, spellId, "CHARGES", maxCharges)
-					chargespells[btype][spellId] = spellName
-				else
-					local spellcd = GetSpellBaseCooldown(placeholder[spellId] or spellId)
-					if spellcd and spellcd > 2499 then
-						sb[spellId] = spellName
-						--print(i, spellName, spellId, "COOLDOWN", spellcd / 1000)
-						if specialspells[spellName] then
-							sb[ specialspells[spellName] ] = spellName
-						end
-					elseif spellName ~= GetSpellInfo(i, btype) or IsTalentSpell(i, btype) then -- can't use IsTalentSpell alone because some spec spells also morph and get cooldowns
-						--print(i, spellName, spellId, "MISMATCH", (GetSpellInfo(i, btype)))
-						scantip:SetOwner(WorldFrame, "ANCHOR_NONE")
-						scantip:SetSpellBookItem(i, btype)
-						for j = 2, 3 do
-							local text = scantip[j]:GetText()
-							local spellcd = text and ParseCooldown(text)
-							if spellcd and spellcd > 2499 then
-								--print(i, spellName, spellId, "COOLDOWN", spellcd / 1000, "***")
-								sb[spellId] = spellName
-								break
+			elseif spellID and spellType == "SPELL" and spellID ~= lastID then
+				-- Base spell = slot ID + name from slot ID
+				-- Real spell = ID from slot name + name from slot name
+				-- For the purposes of CoolLine we only care about the real spell.
+				lastID = spellID
+				spellName, _, _, _, _, _, spellID = GetSpellInfo(spellName)
+				if spellID then
+					-- Special spells like warlock Cauterize Master can be in
+					-- a limbo state during loading. Just ignore them in that
+					-- case. The spellbook will update again momentarily and
+					-- they will correctly resolve then.
+					local _, maxCharges = GetSpellCharges(spellID)
+					if maxCharges and maxCharges > 0 then
+						chargespells[btype][spellID] = spellName
+					else
+						local cd = GetSpellBaseCooldown(spellID)
+						if cd and cd > 2499 then
+							sb[spellID] = spellName
+							if specialspells[spellName] then
+								sb[ specialspells[spellName] ] = spellName
 							end
 						end
-						scantip:Hide()
 					end
 				end
 			end
