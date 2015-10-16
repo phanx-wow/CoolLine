@@ -21,7 +21,7 @@ local tick0, tick1, tick3, tick10, tick30, tick120, tick300
 local BOOKTYPE_SPELL, BOOKTYPE_PET = BOOKTYPE_SPELL, BOOKTYPE_PET
 local spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { }, }
 local chargespells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { }, }
-local frames, cooldowns, specialspells, placeholder = { }, { }, { }, { }
+local frames, cooldowns, specialspells = { }, { }, { }
 
 local SetValue, updatelook, createfs, ShowOptions, RuneCheck
 local function SetValueH(this, v, just)
@@ -102,23 +102,13 @@ function CoolLine:ADDON_LOADED(a1)
 				return true
 			end
 		end
-	elseif class == "MAGE" then
-		placeholder = { [125430] = 112948, }
 	elseif class == "PRIEST" then
 		specialspells = {
-			[GetSpellInfo(87151) or "blah"] = 87151,  -- Archangel
-			[GetSpellInfo(14751) or "blah"] = 14751,  -- Chakra
-			[GetSpellInfo(81209) or "blah"] = 81209,  -- Chakra
+			[GetSpellInfo(81209) or "blah"] = 81209,  -- Chakra: Chastise
 			[GetSpellInfo(88684) or "blah"] = 88684,  -- Holy Word: Serenity
-			[GetSpellInfo(88682) or "blah"] = 88682,  -- Holy Word: Aspire
 			[GetSpellInfo(88685) or "blah"] = 88685,  -- Holy Word: Sanctuary
 			[GetSpellInfo(88625) or "blah"] = 88625,  -- Holy Word: Chastise
 		}
-	--[[elseif class == "DRUID" then
-		specialspells = {
-			[GetSpellInfo(33917) or "blah"] = 33878,  -- Mangle (Bear)
-			[GetSpellInfo(106830) or "blah"] = 77758,  -- Thrash (Bear)
-		}]]--
 	end
 
 	SlashCmdList.COOLLINE = ShowOptions
@@ -444,7 +434,7 @@ do  -- cache spells that have a cooldown
 						if flyID then
 							local flyCD = GetSpellBaseCooldown(flyID)
 							if flyCD and flyCD > 2499 then
-								sb[flyID] = specialspells[flyID] or flyName
+								sb[flyID] = flyName -- specialspells[flyID] or flyName
 							end
 						end
 					end
@@ -467,9 +457,9 @@ do  -- cache spells that have a cooldown
 						local cd = GetSpellBaseCooldown(spellID)
 						if cd and cd > 2499 then
 							sb[spellID] = spellName
-							if specialspells[spellName] then
-								sb[ specialspells[spellName] ] = spellName
-							end
+				--			if specialspells[spellName] then
+				--				sb[ specialspells[spellName] ] = spellName
+				--			end
 						end
 					end
 				end
