@@ -17,6 +17,8 @@ local BOOKTYPE_SPELL, BOOKTYPE_PET = BOOKTYPE_SPELL, BOOKTYPE_PET
 local spells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { }, }
 local chargespells = { [BOOKTYPE_SPELL] = { }, [BOOKTYPE_PET] = { }, }
 local frames, cooldowns, specialspells = { }, { }, { }
+CoolLine.spells, CoolLine.chargespells = spells, chargespells
+CoolLine.frames, CoolLine.cooldowns, CoolLine.specialspells = frames, cooldowns, specialspells
 
 local SetValue, updatelook, createfs, ShowOptions, RuneCheck
 local function SetValueH(this, v, just)
@@ -303,7 +305,7 @@ local function ClearCooldown(f, name)
 			frame:Hide()
 			frame.name = nil
 			frame.endtime = nil
-			tinsert(frames, tremove(cooldowns, index))
+			tinsert(frames, tremove(cooldowns, i))
 			break
 		end
 	end
