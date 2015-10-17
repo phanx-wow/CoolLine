@@ -1,18 +1,13 @@
 local CoolLine = CreateFrame("Frame", "CoolLine", UIParent)
-local self = CoolLine
-self:SetScript("OnEvent", function(this, event, ...)
+CoolLine:SetScript("OnEvent", function(this, event, ...)
 	this[event](this, ...)
 end)
 local smed = LibStub("LibSharedMedia-3.0")
 
-local _G = getfenv(0)
-local pairs, ipairs = pairs, ipairs
-local tinsert, tremove = tinsert, tremove
+local _G, pairs, strmatch, tinsert, tremove, random = _G, pairs, string.match, table.insert, table.remove, math.random
 local GetTime = GetTime
-local random = math.random
-local strmatch = strmatch
-local UnitExists, HasPetUI = UnitExists, HasPetUI
 local GetSpellInfo = GetSpellInfo
+local UnitExists, HasPetUI = UnitExists, HasPetUI
 
 local db, block
 local backdrop = { edgeSize=16, } -- Left Unchanged
@@ -25,19 +20,19 @@ local frames, cooldowns, specialspells = { }, { }, { }
 
 local SetValue, updatelook, createfs, ShowOptions, RuneCheck
 local function SetValueH(this, v, just)
-	this:SetPoint(just or "CENTER", self, "LEFT", v, 0)
+	this:SetPoint(just or "CENTER", CoolLine, "LEFT", v, 0)
 end
 local function SetValueHR(this, v, just)
-	this:SetPoint(just or "CENTER", self, "LEFT", db.w - v, 0)
+	this:SetPoint(just or "CENTER", CoolLine, "LEFT", db.w - v, 0)
 end
 local function SetValueV(this, v, just)
-	this:SetPoint(just or "CENTER", self, "BOTTOM", 0, v)
+	this:SetPoint(just or "CENTER", CoolLine, "BOTTOM", 0, v)
 end
 local function SetValueVR(this, v, just)
-	this:SetPoint(just or "CENTER", self, "BOTTOM", 0, db.h - v)
+	this:SetPoint(just or "CENTER", CoolLine, "BOTTOM", 0, db.h - v)
 end
 
-self:RegisterEvent("ADDON_LOADED")
+CoolLine:RegisterEvent("ADDON_LOADED")
 function CoolLine:ADDON_LOADED(a1)
 	if a1 ~= "CoolLine" then return end
 	self:UnregisterEvent("ADDON_LOADED")
@@ -238,9 +233,8 @@ function CoolLine:ADDON_LOADED(a1)
 			self:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
 		end
 		CoolLine:SetAlpha((CoolLine.unlock or #cooldowns > 0) and db.activealpha or db.inactivealpha)
-		for _, frame in ipairs(cooldowns) do
-			frame:SetWidth(iconsize)
-			frame:SetHeight(iconsize)
+		for i = 1, #cooldowns do
+			cooldowns[i]:SetSize(iconsize, iconsize)
 		end
 	end
 	CoolLine.updatelook = updatelook
@@ -303,7 +297,8 @@ local iconback = { bgFile="Interface\\AddOns\\CoolLine\\backdrop.tga" }
 local elapsed, throt, ptime, isactive = 0, 1.5, 0, false
 local function ClearCooldown(f, name)
 	name = name or (f and f.name)
-	for index, frame in ipairs(cooldowns) do
+	for i = 1, #cooldowns do
+		local frame = cooldowns[i]
 		if frame.name == name then
 			frame:Hide()
 			frame.name = nil
@@ -328,8 +323,8 @@ local function OnUpdate(this, a1, ctime, dofl)
 
 	if #cooldowns == 0 then
 		if not CoolLine.unlock then
-			self:SetScript("OnUpdate", nil)
-			self:SetAlpha(db.inactivealpha)
+			CoolLine:SetScript("OnUpdate", nil)
+			CoolLine:SetAlpha(db.inactivealpha)
 		end
 		return
 	end
@@ -373,7 +368,7 @@ local function OnUpdate(this, a1, ctime, dofl)
 		end
 	end
 	if not isactive and not CoolLine.unlock then
-		self:SetAlpha(db.inactivealpha)
+		CoolLine:SetAlpha(db.inactivealpha)
 	end
 end
 local function NewCooldown(name, icon, endtime, isplayer)
@@ -407,9 +402,9 @@ local function NewCooldown(name, icon, endtime, isplayer)
 	local c = db[isplayer and "spellcolor" or "nospellcolor"]
 	f:SetBackdropColor(c.r, c.g, c.b, c.a)
 	f:Show()
-	self:SetScript("OnUpdate", OnUpdate)
-	self:SetAlpha(db.activealpha)
-	OnUpdate(self, 2, ctime)
+	CoolLine:SetScript("OnUpdate", OnUpdate)
+	CoolLine:SetAlpha(db.activealpha)
+	OnUpdate(CoolLine, 2, ctime)
 end
 CoolLine.NewCooldown, CoolLine.ClearCooldown = NewCooldown, ClearCooldown
 
@@ -488,7 +483,8 @@ do  -- scans spellbook to update cooldowns, throttled since the event fires a lo
 					local _, _, texture = GetSpellInfo(id)
 					NewCooldown(name, texture, start + duration, btype == BOOKTYPE_SPELL)
 				else
-					for index, frame in ipairs(cooldowns) do
+					for i = 1, #cooldowns do
+						local frame = cooldowns[i]
 						if frame.name == name then
 							if frame.endtime > start + duration + 0.1 then
 								frame.endtime = start + duration
@@ -608,10 +604,10 @@ function CoolLine:ACTIONBAR_UPDATE_COOLDOWN()  -- used only for vehicles
 			if enable == 1 then
 				if start > 0 and not block[GetActionInfo(b.action)] then
 					if duration > 3 then
-						NewCooldown("vhcle"..i, GetActionTexture(b.action), start + duration)
+						NewCooldown("vehicle"..i, GetActionTexture(b.action), start + duration)
 					end
 				else
-					ClearCooldown(nil, "vhcle"..i)
+					ClearCooldown(nil, "vehicle"..i)
 				end
 			end
 		end
@@ -629,8 +625,9 @@ end
 function CoolLine:UNIT_EXITED_VEHICLE()
 -----------------------------------------
 	self:UnregisterEvent("ACTIONBAR_UPDATE_COOLDOWN")
-	for index, frame in ipairs(cooldowns) do
-		if strmatch(frame.name, "vhcle") then
+	for i = 1, #cooldowns do
+		local frame = cooldowns[i]
+		if strmatch(frame.name, "vehicle") then
 			ClearCooldown(nil, frame.name)
 		end
 	end
