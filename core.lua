@@ -9,6 +9,8 @@ local GetTime = GetTime
 local GetSpellInfo = GetSpellInfo
 local UnitExists, HasPetUI = UnitExists, HasPetUI
 
+local IS_WOW_8 = GetBuildInfo():match("^8")
+
 local db, block
 local backdrop = { edgeSize=16, } -- Left Unchanged
 local section, iconsize = 0, 0
@@ -572,7 +574,12 @@ function CoolLine:PET_BAR_UPDATE_COOLDOWN()
 	for i = 1, 10, 1 do
 		local start, duration, enable = GetPetActionCooldown(i)
 		if enable == 1 then
-			local name, _, texture = GetPetActionInfo(i)
+			local name, _, texture
+			if IS_WOW_8 then
+				name, texture = GetPetActionInfo(i)
+			else
+				name, _, texture = GetPetActionInfo(i)
+			end
 			if name then
 				if start > 0 and not block[name] then
 					if duration > 3 then
